@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>План квартиры</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum/build/pannellum.css">
+  <script src="https://cdn.jsdelivr.net/npm/pannellum/build/pannellum.js"></script>
+  <style>
+    /* Стили как в предыдущем коде (без редакторских элементов) */
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      background: white;
+    }
+    #menu {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: white;
+    }
+    #plan-container {
+      position: relative;
+      max-width: 90%;
+      max-height: 90%;
+      text-align: center;
+    }
+    #plan {
+      max-width: 100%;
+      max-height: 80vh;
+      border: 1px solid #ddd;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .marker {
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      background: #FF5722;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 5px rgba(0,0,0,0.5);
+      z-index: 10;
+      cursor: pointer;
+    }
+    .marker-label {
+      position: absolute;
+      top: -30px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.7);
+      color: white;
+      padding: 3px 8px;
+      border-radius: 3px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    #panorama {
+      width: 100%;
+      height: 100%;
+      display: none;
+    }
+    #back-btn {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      padding: 10px 20px;
+      background: rgba(0,0,0,0.7);
+      color: white;
+      border: none;
+      border-radius: 5px;
+      z-index: 1000;
+      cursor: pointer;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="menu">
+    <div id="plan-container">
+      <img id="plan" src="план_квартиры.jpg" alt="План квартиры">
+      <!-- Маркеры добавляются скриптом -->
+    </div>
+  </div>
+
+  <div id="panorama"></div>
+  <button id="back-btn" onclick="backToMenu()">← Назад к плану</button>
+
+  <script>
+    let viewer = null;
+    let markers = [];
+
+    // Загрузка маркеров
+    function loadMarkers() {
+      const savedMarkers = localStorage.getItem('apartmentMarkers');
+      markers = savedMarkers ? JSON.parse(savedMarkers) : [
+        { id: 1, top: 25, left: 30, room: 'Спальня', image: 'Спальня.jpg' },
+        { id: 2, top: 60, left: 20, room: 'Санузел', image: 'Санузел.jpg' },
+        { id: 3, top: 15, left: 70, room: 'Гостиная', image: 'Гостиная.jpg' },
+        { id: 4, top: 75, left: 65, room: 'Прихожая', image: 'Прихожая.jpg' }
+      ];
+      renderMarkers();
+    }
+
+    // Отрисовка маркеров (только кликабельные)
+    function renderMarkers() {
+      const container = document.getElementById('plan-container');
+      document.querySelectorAll('.marker').forEach(m => m.remove());
+      
+      markers.forEach(marker => {
+        const markerEl = document.createElement('div');
+        markerEl.className = 'marker';
+        markerEl.style.top = `${marker.top}%`;
+        markerEl.style.left = `${marker.left}%`;
+        markerEl.dataset.id = marker.id;
+        
+        const label = document.createElement('div');
+        label.className = 'marker-label';
+        label.textContent = marker.room;
+        
+        markerEl.appendChild(label);
+        container.appendChild(markerEl);
+
+        markerEl.addEventListener('click', () => loadPanorama(marker.image));
+      });
+    }
+
+    // Загрузка панорамы
+    function loadPanorama(imageName) {
+      document.getElementById("menu").style.display = "none";
+      document.getElementById("panorama").style.display = "block";
+      document.getElementById("back-btn").style.display = "block";
+
+      if (viewer) viewer.destroy();
+
+      viewer = pannellum.viewer('panorama', {
+        "type": "equirectangular",
+        "panorama": imageName,
+        "autoLoad": true,
+        "autoRotate": -2,
+        "compass": true
+      });
+    }
+
+    // Возврат в меню
+    function backToMenu() {
+      document.getElementById("menu").style.display = "flex";
+      document.getElementById("panorama").style.display = "none";
+      document.getElementById("back-btn").style.display = "none";
+      if (viewer) viewer.destroy();
+    }
+
+    document.addEventListener('DOMContentLoaded', loadMarkers);
+  </script>
+</body>
+</html>
