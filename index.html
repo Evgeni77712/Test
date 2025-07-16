@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Интерактивный план квартиры</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum/build/pannellum.css">
+  <script src="https://cdn.jsdelivr.net/npm/pannellum/build/pannellum.js"></script>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+    }
+    #menu {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      background: #f5f5f5;
+      overflow: hidden;
+    }
+    #plan {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #eee;
+    }
+    .marker {
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      background: #4CAF50;
+      border-radius: 50%;
+      cursor: pointer;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+      transition: all 0.3s;
+    }
+    .marker:hover {
+      transform: translate(-50%, -50%) scale(1.2);
+      background: #FF5722;
+    }
+    .marker::after {
+      content: '';
+      position: absolute;
+      top: -15px;
+      left: -15px;
+      right: -15px;
+      bottom: -15px;
+      border: 2px solid rgba(76, 175, 80, 0.5);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    #panorama {
+      width: 100%;
+      height: 100%;
+      display: none;
+    }
+    #back-btn {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      padding: 10px 20px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      border: none;
+      border-radius: 5px;
+      z-index: 1000;
+      cursor: pointer;
+      display: none;
+    }
+    @keyframes pulse {
+      0% { transform: scale(0.8); opacity: 1; }
+      70% { transform: scale(1.3); opacity: 0; }
+      100% { opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Главное меню с планом -->
+  <div id="menu">
+    <img id="plan" src="план_квартиры.jpg" alt="План квартиры">
+    <!-- Маркеры (координаты X,Y в %) -->
+    <div class="marker" style="top: 25%; left: 30%;" onclick="loadPanorama('Спальня.jpg')"></div>
+    <div class="marker" style="top: 60%; left: 20%;" onclick="loadPanorama('Санузел.jpg')"></div>
+    <div class="marker" style="top: 15%; left: 70%;" onclick="loadPanorama('Гостиная.jpg')"></div>
+    <div class="marker" style="top: 75%; left: 65%;" onclick="loadPanorama('Прихожая.jpg')"></div>
+  </div>
+
+  <!-- Контейнер для панорамы -->
+  <div id="panorama"></div>
+
+  <!-- Кнопка "Назад" -->
+  <button id="back-btn" onclick="backToMenu()">← Назад к плану</button>
+
+  <script>
+    let viewer = null;
+
+    function loadPanorama(imageName) {
+      document.getElementById("menu").style.display = "none";
+      document.getElementById("panorama").style.display = "block";
+      document.getElementById("back-btn").style.display = "block";
+
+      if (viewer) viewer.destroy();
+
+      viewer = pannellum.viewer('panorama', {
+        "type": "equirectangular",
+        "panorama": imageName,
+        "autoLoad": true,
+        "autoRotate": -2,
+        "compass": true
+      });
+    }
+
+    function backToMenu() {
+      document.getElementById("menu").style.display = "block";
+      document.getElementById("panorama").style.display = "none";
+      document.getElementById("back-btn").style.display = "none";
+      if (viewer) viewer.destroy();
+    }
+  </script>
+</body>
+</html>
