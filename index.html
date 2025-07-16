@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Интерактивный план квартиры</title>
+  <title>Интерактивный план с редактором</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum/build/pannellum.css">
   <script src="https://cdn.jsdelivr.net/npm/pannellum/build/pannellum.js"></script>
   <style>
@@ -14,7 +14,7 @@
       height: 100%;
       overflow: hidden;
       font-family: Arial, sans-serif;
-      background: white;
+      background: white; /* Чисто белый фон */
     }
     #menu {
       position: relative;
@@ -43,12 +43,10 @@
       height: 24px;
       background: #FF5722;
       border-radius: 50%;
+      cursor: move;
       transform: translate(-50%, -50%);
       box-shadow: 0 0 5px rgba(0,0,0,0.5);
       z-index: 10;
-    }
-    .edit-mode .marker {
-      cursor: move;
     }
     .marker-label {
       position: absolute;
@@ -91,7 +89,6 @@
       border-radius: 5px;
       z-index: 1000;
       cursor: pointer;
-      display: none;
     }
     #editor-panel {
       position: fixed;
@@ -135,21 +132,24 @@
     let markers = [];
     let isDragging = false;
     let draggedMarker = null;
-    const isEditMode = new URLSearchParams(window.location.search).has('edit');
 
-    // Загружаем маркеры
+    // Загружаем маркеры из localStorage или создаём стандартные
     function loadMarkers() {
       const savedMarkers = localStorage.getItem('apartmentMarkers');
-      markers = savedMarkers ? JSON.parse(savedMarkers) : [
-        { id: 1, top: 25, left: 30, room: 'Спальня', image: 'Спальня.jpg' },
-        { id: 2, top: 60, left: 20, room: 'Санузел', image: 'Санузел.jpg' },
-        { id: 3, top: 15, left: 70, room: 'Гостиная', image: 'Гостиная.jpg' },
-        { id: 4, top: 75, left: 65, room: 'Прихожая', image: 'Прихожая.jpg' }
-      ];
+      if (savedMarkers) {
+        markers = JSON.parse(savedMarkers);
+      } else {
+        markers = [
+          { id: 1, top: 25, left: 30, room: 'Спальня', image: 'Спальня.jpg' },
+          { id: 2, top: 60, left: 20, room: 'Санузел', image: 'Санузел.jpg' },
+          { id: 3, top: 15, left: 70, room: 'Гостиная', image: 'Гостиная.jpg' },
+          { id: 4, top: 75, left: 65, room: 'Прихожая', image: 'Прихожая.jpg' }
+        ];
+      }
       renderMarkers();
     }
 
-    // Отрисовка маркеров
+    // Отрисовываем маркеры на плане
     function renderMarkers() {
       const container = document.getElementById('plan-container');
       document.querySelectorAll('.marker').forEach(m => m.remove());
@@ -168,31 +168,71 @@
         markerEl.appendChild(label);
         container.appendChild(markerEl);
 
-        if (isEditMode) {
-          markerEl.addEventListener('mousedown', startDrag);
-        } else {
-          markerEl.style.cursor = 'pointer';
-          markerEl.addEventListener('click', () => loadPanorama(marker.image));
-        }
+        // Перетаскивание маркера
+        markerEl.addEventListener('mousedown', startDrag);
       });
-
-      // Активируем интерфейс редактора
-      if (isEditMode) {
-        document.body.classList.add('edit-mode');
-        document.getElementById('editor-btn').style.display = 'block';
-      }
     }
 
-    // Редакторские функции (аналогично предыдущему коду)
-    function startDrag(e) { /* ... */ }
-    function dragMarker(e) { /* ... */ }
-    function stopDrag() { /* ... */ }
-    function addMarker() { /* ... */ }
-    function saveMarkers() { /* ... */ }
-    function updateMarkerImage(id, image) { /* ... */ }
-    function removeMarker(id) { /* ... */ }
-    function toggleEditor() { /* ... */ }
-    function updateEditorList() { /* ... */ }
+    // Начало перетаскивания
+    function startDrag(e) {
+      isDragging = true;
+      draggedMarker = e.target.closest('.marker');
+      document.addEventListener('mousemove', dragMarker);
+      document.addEventListener('mouseup', stopDrag);
+      e.preventDefault();
+    }
+
+    // Перемещение маркера
+    function dragMarker(e) {
+      if (!isDragging) return;
+      
+      const container = document.getElementById('plan-container');
+      const rect = container.getBoundingClientRect();
+      
+      const left = ((e.clientX - rect.left) / rect.width) * 100;
+      const top = ((e.clientY - rect.top) / rect.height) * 100;
+      
+      draggedMarker.style.left = `${Math.max(0, Math.min(100, left))}%`;
+      draggedMarker.style.top = `${Math.max(0, Math.min(100, top))}%`;
+    }
+
+    // Конец перетаскивания
+    function stopDrag() {
+      if (!isDragging) return;
+      
+      const markerId = parseInt(draggedMarker.dataset.id);
+      const marker = markers.find(m => m.id === markerId);
+      
+      if (marker) {
+        marker.left = parseFloat(draggedMarker.style.left);
+        marker.top = parseFloat(draggedMarker.style.top);
+      }
+      
+      isDragging = false;
+      draggedMarker = null;
+      document.removeEventListener('mousemove', dragMarker);
+      document.removeEventListener('mouseup', stopDrag);
+    }
+
+    // Добавление нового маркера
+    function addMarker() {
+      const newId = markers.length > 0 ? Math.max(...markers.map(m => m.id)) + 1 : 1;
+      markers.push({
+        id: newId,
+        top: 50,
+        left: 50,
+        room: `Комната ${newId}`,
+        image: 'Спальня.jpg' // По умолчанию
+      });
+      renderMarkers();
+      updateEditorList();
+    }
+
+    // Сохранение маркеров
+    function saveMarkers() {
+      localStorage.setItem('apartmentMarkers', JSON.stringify(markers));
+      alert('Маркеры сохранены!');
+    }
 
     // Загрузка панорамы
     function loadPanorama(imageName) {
@@ -220,8 +260,64 @@
       if (viewer) viewer.destroy();
     }
 
+    // Переключение редактора
+    function toggleEditor() {
+      const panel = document.getElementById("editor-panel");
+      panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+      updateEditorList();
+    }
+
+    // Обновление списка маркеров в редакторе
+    function updateEditorList() {
+      const list = document.getElementById("marker-list");
+      list.innerHTML = '';
+      
+      markers.forEach(marker => {
+        const item = document.createElement('div');
+        item.style.margin = '5px 0';
+        item.innerHTML = `
+          <div><strong>${marker.room}</strong></div>
+          <div>X: ${marker.left.toFixed(1)}%, Y: ${marker.top.toFixed(1)}%</div>
+          <select onchange="updateMarkerImage(${marker.id}, this.value)">
+            <option ${marker.image === 'Спальня.jpg' ? 'selected' : ''}>Спальня.jpg</option>
+            <option ${marker.image === 'Санузел.jpg' ? 'selected' : ''}>Санузел.jpg</option>
+            <option ${marker.image === 'Гостиная.jpg' ? 'selected' : ''}>Гостиная.jpg</option>
+            <option ${marker.image === 'Прихожая.jpg' ? 'selected' : ''}>Прихожая.jpg</option>
+          </select>
+          <button onclick="removeMarker(${marker.id})">Удалить</button>
+        `;
+        list.appendChild(item);
+      });
+    }
+
+    // Обновление изображения для маркера
+    function updateMarkerImage(id, image) {
+      const marker = markers.find(m => m.id === id);
+      if (marker) marker.image = image;
+    }
+
+    // Удаление маркера
+    function removeMarker(id) {
+      markers = markers.filter(m => m.id !== id);
+      renderMarkers();
+      updateEditorList();
+    }
+
     // Инициализация
-    document.addEventListener('DOMContentLoaded', loadMarkers);
+    document.addEventListener('DOMContentLoaded', () => {
+      loadMarkers();
+      
+      // Клик по маркеру (после загрузки)
+      document.getElementById('plan-container').addEventListener('click', (e) => {
+        if (isDragging) return;
+        const marker = e.target.closest('.marker');
+        if (marker) {
+          const markerId = parseInt(marker.dataset.id);
+          const markerData = markers.find(m => m.id === markerId);
+          if (markerData) loadPanorama(markerData.image);
+        }
+      });
+    });
   </script>
 </body>
 </html>
